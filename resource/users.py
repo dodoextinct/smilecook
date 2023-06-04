@@ -27,8 +27,8 @@ user_public_schema = UserSchema(exclude = ('email', ))
 
 recipe_list_schema = RecipeSchema(many=True)
 
-mailgun = MailgunApi(domain = 'sandboxf5d4d37b513a4d1aa968b24d77894a4f.mailgun.org', 
-                     api_key = '9361c2e0a01eeb84f2121106b111157e-5d9bd83c-0d572ab1')
+mailgun = MailgunApi(domain = 'domain.mailgun.org', 
+                     api_key = 'api-key')
 
 @parser.error_handler
 def handle_request_parsing_error(err, req, schema, *, error_status_code, error_headers):
