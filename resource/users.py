@@ -5,10 +5,10 @@ Created on Fri May 12 20:37:26 2023
 @author: yashk
 """
 
-from flask import request
+from flask import request, url_for
 from flask_restful import Resource
 from http import HTTPStatus
-from util import hash_password
+from util import generate_token, verify_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from schemas.recipe import RecipeSchema
@@ -20,11 +20,15 @@ from webargs.flaskparser import use_kwargs, parser, abort
 from models.recipe import Recipe
 from models.users import User
 
+from mailgun import MailgunApi
+
 user_schema = UserSchema()
 user_public_schema = UserSchema(exclude = ('email', ))
 
 recipe_list_schema = RecipeSchema(many=True)
 
+mailgun = MailgunApi(domain = 'sandboxf5d4d37b513a4d1aa968b24d77894a4f.mailgun.org', 
+                     api_key = '9361c2e0a01eeb84f2121106b111157e-5d9bd83c-0d572ab1')
 
 @parser.error_handler
 def handle_request_parsing_error(err, req, schema, *, error_status_code, error_headers):
@@ -53,6 +57,13 @@ class UserListResource(Resource):
         
         user = User(**data)
         user.save()
+        
+        token = generate_token(user.email, salt = 'activate')
+        subject = 'Please confirm your registration.'
+        link = url_for('useractivateresource', token=token, _external=True)
+        text = 'Hi, thanks! Please confirm by clicking on below link : {}'.format(link)
+        
+        mailgun.send_email(to = user.email, subject = subject, text = text)
         
         return user_schema.dump(user), HTTPStatus.CREATED
     
@@ -103,3 +114,26 @@ class UserRecipeListResource(Resource):
         recipes = Recipe.get_all_by_user(user_id=user.id, visibility=visibility)
         
         return recipe_list_schema.dump(recipes), HTTPStatus.OK
+    
+class UserActivateResource(Resource):
+    
+    def get(self, token):
+        email = verify_token(token, salt = 'activate')
+        
+        if not email:
+            return {'message' : 'Invalid token or token expired!!'}, HTTPStatus.BAD_REQUEST
+        
+        user = User.get_by_email(email=email)
+        
+        if not user:
+            return {'message' : 'user not found'}, HTTPStatus.NOT_FOUND
+        
+        if user.is_active:
+            return {'message' : 'User is already activated!!'}, HTTPStatus.BAD_REQUEST
+        
+        user.is_active = True
+        user.save()
+        
+        return {}, HTTPStatus.NO_CONTENT
+        
+        
