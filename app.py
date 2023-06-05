@@ -10,18 +10,21 @@ from flask_migrate import Migrate
 from flask_restful import Api
 
 from config import Config
-from extensions import db, jwt
+from extensions import db, jwt, image_set
 
-from resource.users import UserListResource, UserResource, MeResource, UserRecipeListResource, UserActivateResource
-from resource.recipe import RecipeListResource, RecipeResource, RecipePublishResource
+from resource.users import UserListResource, UserResource, MeResource, UserRecipeListResource, UserActivateResource, UserAvatarUploadResource
+from resource.recipe import RecipeListResource, RecipeResource, RecipePublishResource, RecipeCoverUploadResource
 from resource.token import TokenResource, RefreshResource, RevokeResource, black_list
 
+from flask_uploads import configure_uploads, patch_request_class
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     register_extensions(app)
     register_resources(app)
+    configure_uploads(app, image_set)
+    patch_request_class(app, 10*1024*1024)
     
     return app
 
@@ -42,6 +45,7 @@ def register_resources(app):
     api.add_resource(MeResource, '/me')
     api.add_resource(UserRecipeListResource, '/users/recipes/<string:username>')
     api.add_resource(UserActivateResource, '/users/activate/<string:token>')
+    api.add_resource(UserAvatarUploadResource, '/users/avatar')
     
     api.add_resource(TokenResource, '/token')
     api.add_resource(RefreshResource, '/refresh')
@@ -50,6 +54,7 @@ def register_resources(app):
     api.add_resource(RecipeListResource, '/recipes')
     api.add_resource(RecipeResource, '/recipes/<int:recipe_id>')
     api.add_resource(RecipePublishResource, '/recipes/<int:recipe_id>/publish')
+    api.add_resource(RecipeCoverUploadResource, '/recipes/<int:recipe_id>/cover')
 
 if __name__=='__main__':
     app = create_app()

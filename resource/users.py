@@ -4,11 +4,11 @@ Created on Fri May 12 20:37:26 2023
 
 @author: yashk
 """
-
+import os
 from flask import request, url_for
 from flask_restful import Resource
 from http import HTTPStatus
-from util import generate_token, verify_token
+from util import generate_token, verify_token, save_image
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from schemas.recipe import RecipeSchema
@@ -21,6 +21,7 @@ from models.recipe import Recipe
 from models.users import User
 
 from mailgun import MailgunApi
+from extensions import image_set
 
 user_schema = UserSchema()
 user_public_schema = UserSchema(exclude = ('email', ))
@@ -29,6 +30,8 @@ recipe_list_schema = RecipeSchema(many=True)
 
 mailgun = MailgunApi(domain = 'domain.mailgun.org', 
                      api_key = 'api-key')
+
+user_avatar_schema = UserSchema(only=('avatar_url', ))
 
 @parser.error_handler
 def handle_request_parsing_error(err, req, schema, *, error_status_code, error_headers):
@@ -136,4 +139,29 @@ class UserActivateResource(Resource):
         
         return {}, HTTPStatus.NO_CONTENT
         
+class UserAvatarUploadResource(Resource):
+    
+    @jwt_required()
+    def put(self):
         
+        file = request.files.get('avatar')
+
+        if not file:
+            return {'message': 'Not a valid image'}, HTTPStatus.BAD_REQUEST
+
+        if not image_set.file_allowed(file, file.filename):
+            return {'message': 'File type not allowed'}, HTTPStatus.BAD_REQUEST
+
+        user = User.get_by_id(id=get_jwt_identity())
+
+        if user.avatar_image:
+            avatar_path = image_set.path(folder='avatars', filename=user.avatar_image)
+            if os.path.exists(avatar_path):
+                os.remove(avatar_path)
+
+        filename = save_image(image=file, folder='avatars')
+
+        user.avatar_image = filename
+        user.save()
+
+        return user_avatar_schema.dump(user), HTTPStatus.OK

@@ -7,8 +7,9 @@ Created on Fri May 12 00:13:26 2023
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
+from flask_uploads import UploadSet, IMAGES
 
 db = SQLAlchemy()
 jwt = JWTManager()
-
+image_set = UploadSet('images', IMAGES)
 

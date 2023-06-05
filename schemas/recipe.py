@@ -4,7 +4,7 @@ Created on Wed May 17 22:29:49 2023
 
 @author: yashk
 """
-
+from flask_restful import url_for
 from marshmallow import Schema, fields, post_dump, validate, validates, ValidationError
 from schemas.users import UserSchema
 
@@ -32,6 +32,7 @@ class RecipeSchema(Schema):
     
     author = fields.Nested(UserSchema, attribute='user', dump_only = True, exclude=('email', ))
     
+    cover_url = fields.Method(serialize='dump_cover_url')
             
     @validates('cook_time')
     def validate_cook_time(self, n):
@@ -44,3 +45,12 @@ class RecipeSchema(Schema):
             return {'data' : data}
         
         return data
+
+    def dump_cover_url(self, recipe):
+        if recipe.cover_image:
+            return url_for('static', filename='images/avatars/{}'.format(recipe.cover_image), _external = True)
+        else:
+            return url_for('static', filename='images/asssets/default-recipe.jpg', _external=True)
+        
+    
+    
