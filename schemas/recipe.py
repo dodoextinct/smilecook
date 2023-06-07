@@ -7,6 +7,7 @@ Created on Wed May 17 22:29:49 2023
 from flask_restful import url_for
 from marshmallow import Schema, fields, post_dump, validate, validates, ValidationError
 from schemas.users import UserSchema
+from schemas.pagination import PaginationSchema
 
 def validate_number_of_servings(n):
     
@@ -24,6 +25,7 @@ class RecipeSchema(Schema):
     directions = fields.String(validate=[validate.Length(max=1000)])
     num_of_servings = fields.Integer(validate=validate_number_of_servings)
     cook_time = fields.Integer()
+    ingredient = fields.String(validate=[validate.Length(max=1000)])
     
     is_publish = fields.Boolean(dump_only=True)
     
@@ -39,12 +41,6 @@ class RecipeSchema(Schema):
         if n not in range(1, 301):
             raise ValidationError("Cook time should be > 0 and < 301 minutes.")
             
-    @post_dump
-    def wrap(self, data, many, **kwargs):
-        if many:
-            return {'data' : data}
-        
-        return data
 
     def dump_cover_url(self, recipe):
         if recipe.cover_image:
@@ -52,5 +48,7 @@ class RecipeSchema(Schema):
         else:
             return url_for('static', filename='images/asssets/default-recipe.jpg', _external=True)
         
+class RecipePaginationSchema(PaginationSchema):
+    data = fields.Nested(RecipeSchema, attribute='items', many=True)
     
     

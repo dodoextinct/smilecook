@@ -10,7 +10,7 @@ from flask_migrate import Migrate
 from flask_restful import Api
 
 from config import Config
-from extensions import db, jwt, image_set
+from extensions import db, jwt, image_set, cache
 
 from resource.users import UserListResource, UserResource, MeResource, UserRecipeListResource, UserActivateResource, UserAvatarUploadResource
 from resource.recipe import RecipeListResource, RecipeResource, RecipePublishResource, RecipeCoverUploadResource
@@ -25,6 +25,7 @@ def create_app():
     register_resources(app)
     configure_uploads(app, image_set)
     patch_request_class(app, 10*1024*1024)
+    cache.init_app(app)
     
     return app
 
@@ -46,7 +47,7 @@ def register_resources(app):
     api.add_resource(UserRecipeListResource, '/users/recipes/<string:username>')
     api.add_resource(UserActivateResource, '/users/activate/<string:token>')
     api.add_resource(UserAvatarUploadResource, '/users/avatar')
-    
+     
     api.add_resource(TokenResource, '/token')
     api.add_resource(RefreshResource, '/refresh')
     api.add_resource(RevokeResource, '/revoke')

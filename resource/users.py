@@ -11,7 +11,7 @@ from http import HTTPStatus
 from util import generate_token, verify_token, save_image
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from schemas.recipe import RecipeSchema
+from schemas.recipe import RecipeSchema, RecipePaginationSchema
 from schemas.users import UserSchema
 
 from webargs import fields
@@ -27,6 +27,7 @@ user_schema = UserSchema()
 user_public_schema = UserSchema(exclude = ('email', ))
 
 recipe_list_schema = RecipeSchema(many=True)
+recipe_pagination_schema = RecipePaginationSchema()
 
 mailgun = MailgunApi(domain = 'domain.mailgun.org', 
                      api_key = 'api-key')
@@ -100,7 +101,9 @@ class MeResource(Resource):
 class UserRecipeListResource(Resource):
     
     @jwt_required(optional=True)
-    @use_kwargs({'visibility': fields.Str(missing='public')})
+    @use_kwargs({'visibility': fields.Str(missing='public'),
+                 'page': fields.Int(missing=1),
+                 'per_page': fields.Int(missing=10),})
     def get(self, username, visibility):
         user = User.get_by_username(username=username)
         
@@ -114,9 +117,9 @@ class UserRecipeListResource(Resource):
         else:
             visibility = 'public'
             
-        recipes = Recipe.get_all_by_user(user_id=user.id, visibility=visibility)
+        paginated_recipes = Recipe.get_all_by_user(user_id=user.id, page=page, per_page=per_page, visibility=visibility)
         
-        return recipe_list_schema.dump(recipes), HTTPStatus.OK
+        return recipe_pagination_schema.dump(paginated_recipes), HTTPStatus.OK
     
 class UserActivateResource(Resource):
     

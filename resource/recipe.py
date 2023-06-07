@@ -10,20 +10,34 @@ from flask_restful import Resource
 from http import HTTPStatus
 from models.recipe import Recipe
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from schemas.recipe import RecipeSchema
+from schemas.recipe import RecipeSchema, RecipePaginationSchema
 from extensions import image_set
 from util import save_image
+from webargs import fields
+from webargs.flaskparser import use_kwargs
 
 recipe_schema = RecipeSchema()
 recipe_list_schema = RecipeSchema(many=True)
 recipe_cover_schema = RecipeSchema(only=('cover_url', ))
+recipe_pagination_schema = RecipePaginationSchema()
 
 class RecipeListResource(Resource):
-    
-    def get(self):
-        recipe_list = Recipe.get_all_published()
+
+    @use_kwargs({'q': fields.Str(missing=''),
+                 'page': fields.Int(missing=1),
+                 'per_page' : fields.Int(missing=20),
+                 'sort': fields.Str(missing='created_at'),
+                 'order':fields.Str(missing='desc')})    
+    def get(self, q, page, per_page, sort, order):
+        if sort not in ['created_at', 'cook_time', 'num_of_servings']:
+            sort = 'created_at'
+        
+        if order not in ['asc', 'desc']:
+            order = 'desc'
+            
+        paginated_recipes = Recipe.get_all_published(q,page, per_page, sort, order)
                 
-        return recipe_list_schema.dump(recipe_list) , HTTPStatus.OK
+        return recipe_pagination_schema.dump(paginated_recipes) , HTTPStatus.OK
     
     @jwt_required()
     def post(self):
@@ -78,7 +92,7 @@ class RecipeResource(Resource):
         recipe.num_of_servings = data.get('num_of_servings') or recipe.num_of_servings
         recipe.cook_time = data.get('cook_time') or recipe.cook_time
         recipe.directions = data.get('directions') or recipe.directions
-        
+        recipe.ingredients = data.get('ingredients') or recipe.ingredients
         recipe.save()
         
         return recipe_schema.dump(recipe), HTTPStatus.OK
