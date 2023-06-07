@@ -8,7 +8,7 @@ import os
 from flask import request, url_for
 from flask_restful import Resource
 from http import HTTPStatus
-from util import generate_token, verify_token, save_image
+from util import generate_token, verify_token, save_image, clear_cache
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from schemas.recipe import RecipeSchema, RecipePaginationSchema
@@ -167,4 +167,5 @@ class UserAvatarUploadResource(Resource):
         user.avatar_image = filename
         user.save()
 
+        clear_cache('/recipes')
         return user_avatar_schema.dump(user), HTTPStatus.OK

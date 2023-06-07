@@ -11,8 +11,8 @@ from http import HTTPStatus
 from models.recipe import Recipe
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from schemas.recipe import RecipeSchema, RecipePaginationSchema
-from extensions import image_set
-from util import save_image
+from extensions import image_set, cache
+from util import save_image, clear_cache
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
@@ -27,8 +27,11 @@ class RecipeListResource(Resource):
                  'page': fields.Int(missing=1),
                  'per_page' : fields.Int(missing=20),
                  'sort': fields.Str(missing='created_at'),
-                 'order':fields.Str(missing='desc')})    
+                 'order':fields.Str(missing='desc')}) 
+    @cache.cached(timeout=60, query_string=True)
     def get(self, q, page, per_page, sort, order):
+        
+        print("Querting database .....")
         if sort not in ['created_at', 'cook_time', 'num_of_servings']:
             sort = 'created_at'
         
@@ -95,6 +98,7 @@ class RecipeResource(Resource):
         recipe.ingredients = data.get('ingredients') or recipe.ingredients
         recipe.save()
         
+        clear_cache('/recipes')
         return recipe_schema.dump(recipe), HTTPStatus.OK
     
     @jwt_required()
@@ -135,6 +139,7 @@ class RecipeResource(Resource):
         
         recipe.delete()
         
+        clear_cache('/recipes')
         return {}, HTTPStatus.NO_CONTENT
     
 class RecipePublishResource(Resource):
@@ -154,6 +159,7 @@ class RecipePublishResource(Resource):
         recipe.is_publish = True
         recipe.save()
         
+        clear_cache('/recipes')
         return {}, HTTPStatus.OK
     
     @jwt_required()
@@ -171,6 +177,7 @@ class RecipePublishResource(Resource):
         recipe.is_publish = False
         recipe.save()
         
+        clear_cache('/recipes')
         return {}, HTTPStatus.NO_CONTENT
 
 class RecipeCoverUploadResource(Resource):
@@ -203,4 +210,5 @@ class RecipeCoverUploadResource(Resource):
         recipe.cover_image = filename
         recipe.save()
 
+        clear_cache('/recipes')
         return recipe_cover_schema.dump(recipe), HTTPStatus.OK
