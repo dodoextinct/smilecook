@@ -4,10 +4,11 @@ Created on Fri May 12 00:09:46 2023
 
 @author: yashk
 """
+import os
 
 class Config:
     
-    DEBUG = True
+    DEBUG = False
     
     SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://localhost/smilecook?user=yash_krishan&password=yash123'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -22,3 +23,22 @@ class Config:
     
     CACHE_TYPE = 'simple'
     CACHE_DEFAULT_TIMEOUT = 10*60
+    
+    RATELIMIT_HEADER_ENABLED = True
+    
+class DevelopmentConfig(Config):
+    
+    DEBUG = True
+    
+    SECRET_KEY = 'super-secret-key'
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://localhost/smilecook?user=yash_krishan&password=yash123'
+
+class ProductionConfig(Config):
+    
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    
+class StagingConfig(Config):
+    
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

@@ -4,13 +4,14 @@ Created on Thu May 11 19:29:47 2023
 
 @author: yashk
 """
+import os
 
-from flask import Flask
+from flask import Flask, request
 from flask_migrate import Migrate
 from flask_restful import Api
 
 from config import Config
-from extensions import db, jwt, image_set, cache
+from extensions import db, jwt, image_set, cache, limiter
 
 from resource.users import UserListResource, UserResource, MeResource, UserRecipeListResource, UserActivateResource, UserAvatarUploadResource
 from resource.recipe import RecipeListResource, RecipeResource, RecipePublishResource, RecipeCoverUploadResource
@@ -18,7 +19,21 @@ from resource.token import TokenResource, RefreshResource, RevokeResource, black
 
 from flask_uploads import configure_uploads, patch_request_class
 
+@limiter.request_filter
+def ip_whitelist():
+    return request.remote_addr == '127.0.0.1'
+
 def create_app():
+    
+    env = os.environ.get('ENV', 'Development')
+    
+    if env == 'Production':
+        config_str = 'config.ProductionConfig'
+    elif env == 'Staging':
+        config_str = 'config.StagingConfig'
+    else:
+        config_str = 'config.DevelopmentConfig'
+
     app = Flask(__name__)
     app.config.from_object(Config)
     register_extensions(app)
@@ -26,6 +41,7 @@ def create_app():
     configure_uploads(app, image_set)
     patch_request_class(app, 10*1024*1024)
     cache.init_app(app)
+    limiter.init_app(app)
     
     return app
 
